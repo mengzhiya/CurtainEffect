@@ -22,8 +22,8 @@ public class CurtainView extends ImageView {
 	private int curtainHeigh = -1;
 
 	private ValueAnimator mCurtainChangeAnimator;
-	private final int ORIGINAL_HEIGHT = 560;
-	private float moveY = 0, upY = 0, downY = -1, downOriginalY = -1;
+	private final int ORIGINAL_HEIGHT = getResources().getDisplayMetrics().heightPixels -100;
+	private float mDdownY = -1, mDownOriginalY = -1;
 	private boolean isMove = false;
 	private View img_curtain_ad;
 	private VelocityTrackerInterface mVelocityTracker;
@@ -45,8 +45,9 @@ public class CurtainView extends ImageView {
 
 	private void init(Context context) {
 		mFlingAnimationUtils = new FlingAnimationUtils(context, 0.6f);
-        final ViewConfiguration configuration = ViewConfiguration.get(getContext());
-        mTouchSlop = configuration.getScaledTouchSlop();
+		final ViewConfiguration configuration = ViewConfiguration
+				.get(getContext());
+		mTouchSlop = configuration.getScaledTouchSlop();
 	}
 
 	@Override
@@ -54,27 +55,28 @@ public class CurtainView extends ImageView {
 		if (null == img_curtain_ad)
 			return false;
 		float diff;
+		float downY;
 		if (!isMove) {
 			switch (event.getAction()) {
 			case MotionEvent.ACTION_DOWN:
-				downY = (int) event.getRawY();
-				downOriginalY = downY;
+				mDownOriginalY = (int) event.getRawY();
+				mDdownY = mDownOriginalY;
 				initVelocityTracker();
 				trackMovement(event);
 				return true;
 			case MotionEvent.ACTION_MOVE:
 				trackMovement(event);
-				moveY = (int) event.getRawY();
-				diff = moveY - downY;
-				if ( Math.abs(diff)  > mTouchSlop) {
+				downY = (int) event.getRawY();
+				diff = downY - mDownOriginalY;
+				if (Math.abs(diff) > mTouchSlop) {
 					updateCurtainParameters((int) (curtainHeigh + diff));
-					downY = moveY;
+					mDdownY = downY;
 				}
 				break;
 			case MotionEvent.ACTION_UP:
 			case MotionEvent.ACTION_CANCEL:
-				upY = (int) event.getRawY();
-				diff = upY - downOriginalY;
+				downY = (int) event.getRawY();
+				diff = mDdownY - mDownOriginalY;
 				trackMovement(event);
 				float vel = 0f;
 				float vectorVel = 0f;
@@ -89,7 +91,7 @@ public class CurtainView extends ImageView {
 				Log.e(TAG, " diff : " + diff + ", vel = " + vel
 						+ ", vectorVel= " + vectorVel);
 				if (isFling) {
-					startAnim(curtainHeigh,  vectorVel > 0 ? ORIGINAL_HEIGHT  : 0);
+					startAnim(curtainHeigh, vectorVel > 0 ? ORIGINAL_HEIGHT : 0);
 				} else {
 					updateCurtainParameters((int) (curtainHeigh + diff));
 				}
@@ -127,20 +129,18 @@ public class CurtainView extends ImageView {
 
 	public void setCurtain(View v) {
 		this.img_curtain_ad = v;
-		this.upY = (int) img_curtain_ad.getY();
 	};
 
 	private void updateCurtainParameters(int y) {
 		ViewGroup.LayoutParams params = img_curtain_ad.getLayoutParams();
 		Log.e(TAG, " y : " + y);
-		y = (y >= ORIGINAL_HEIGHT ? ORIGINAL_HEIGHT : y <= 0 ? 0
-				: y);
+		y = (y >= ORIGINAL_HEIGHT ? ORIGINAL_HEIGHT : y <= 0 ? 0 : y);
 		Log.e(TAG, " y2 : " + y);
 		params.height = y;
 		curtainHeigh = y;
 		img_curtain_ad.setLayoutParams(params);
 		float curY = curtainHeigh + getHeight();
-		setY(curY <=0 ? 0 : curY);
+		setY(curY <= 0 ? 0 : curY);
 	}
 
 	private void startAnim(int oldHeight, final int newHeight) {
