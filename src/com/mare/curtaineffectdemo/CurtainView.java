@@ -1,8 +1,4 @@
-package com.example.curtaineffectdemo;
-
-import com.example.curtaineffectdemo.velocity.FlingAnimationUtils;
-import com.example.curtaineffectdemo.velocity.VelocityTrackerFactory;
-import com.example.curtaineffectdemo.velocity.VelocityTrackerInterface;
+package com.mare.curtaineffectdemo;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -11,24 +7,26 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 
+import com.mare.curtaineffectdemo.velocity.FlingAnimationUtils;
+import com.mare.curtaineffectdemo.velocity.VelocityTrackerFactory;
+import com.mare.curtaineffectdemo.velocity.VelocityTrackerInterface;
+
 public class CurtainView extends ImageView {
 	private static String TAG = "CurtainView";
-	private int curtainHeigh = -1;
 
 	private ValueAnimator mCurtainChangeAnimator;
-	private final int ORIGINAL_HEIGHT = getResources().getDisplayMetrics().heightPixels -100;
-	private float mDdownY = -1, mDownOriginalY = -1;
-	private boolean isMove = false;
-	private View img_curtain_ad;
+	private float mDownY = -1, mDownOriginalY = -1, mCurtainOriginalH = 1300f;
+	private boolean isOccupied = false;
+	private ViewGroup mCurtain;
 	private VelocityTrackerInterface mVelocityTracker;
 	private FlingAnimationUtils mFlingAnimationUtils;
-	float mTouchSlop;
+	private float mTouchSlop;
+	private float mTheshold = 0;
 
 	public CurtainView(Context context) {
 		this(context, null);
@@ -48,60 +46,59 @@ public class CurtainView extends ImageView {
 		final ViewConfiguration configuration = ViewConfiguration
 				.get(getContext());
 		mTouchSlop = configuration.getScaledTouchSlop();
+		mTheshold = mCurtainOriginalH / 10;
 	}
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		if (null == img_curtain_ad)
+		if (null == mCurtain)
 			return false;
 		float diff;
 		float downY;
-		if (!isMove) {
-			switch (event.getAction()) {
-			case MotionEvent.ACTION_DOWN:
-				mDownOriginalY = (int) event.getRawY();
-				mDdownY = mDownOriginalY;
-				initVelocityTracker();
-				trackMovement(event);
-				return true;
-			case MotionEvent.ACTION_MOVE:
-				trackMovement(event);
-				downY = (int) event.getRawY();
-				diff = downY - mDownOriginalY;
-				if (Math.abs(diff) > mTouchSlop) {
-					updateCurtainParameters((int) (curtainHeigh + diff));
-					mDdownY = downY;
-				}
-				break;
-			case MotionEvent.ACTION_UP:
-			case MotionEvent.ACTION_CANCEL:
-				downY = (int) event.getRawY();
-				diff = mDdownY - mDownOriginalY;
-				trackMovement(event);
-				float vel = 0f;
-				float vectorVel = 0f;
-				if (mVelocityTracker != null) {
-					mVelocityTracker.computeCurrentVelocity(1000);
-					vel = mVelocityTracker.getYVelocity();
-					vectorVel = (float) Math.hypot(
-							mVelocityTracker.getXVelocity(),
-							mVelocityTracker.getYVelocity());
-				}
-				boolean isFling = isFling(vel, vectorVel, diff);
-				Log.e(TAG, " diff : " + diff + ", vel = " + vel
-						+ ", vectorVel= " + vectorVel);
-				if (isFling) {
-					startAnim(curtainHeigh, vectorVel > 0 ? ORIGINAL_HEIGHT : 0);
-				} else {
-					updateCurtainParameters((int) (curtainHeigh + diff));
-				}
-				recyleMovement();
-				break;
-			default:
-				break;
+		switch (event.getAction()) {
+		case MotionEvent.ACTION_DOWN:
+			mDownOriginalY = mDownY = event.getRawY();
+			isOccupied = true;
+			initVelocityTracker();
+			trackMovement(event);
+			return true;
+		case MotionEvent.ACTION_MOVE:
+			trackMovement(event);
+			downY = (int) event.getRawY();
+			diff = downY - mDownY;
+			if (Math.abs(diff) >= mTouchSlop) {
+				mDownY = downY;
+				updateCurtainParameters(diff);
 			}
+			break;
+		case MotionEvent.ACTION_UP:
+		case MotionEvent.ACTION_CANCEL:
+			downY = (int) event.getRawY();
+			trackMovement(event);
+			float vel = 0f;
+			float vectorVel = 0f;
+			if (mVelocityTracker != null) {
+				mVelocityTracker.computeCurrentVelocity(1000);
+				vel = mVelocityTracker.getYVelocity();
+				vectorVel = (float) Math.hypot(mVelocityTracker.getXVelocity(),
+						mVelocityTracker.getYVelocity());
+			}
+			float expandedH = downY - mDownOriginalY;
+			//boolean isFling = isFling(vel, vectorVel, expandedH);
+			float target = 0;
+			if (Math.abs(expandedH) < mTheshold
+					|| vel >= mFlingAnimationUtils.getMinVelocityPxPerSecond()) {
+				target = mCurtainOriginalH;
+			} else {
+				target = -mCurtainOriginalH;
+			}
+			startAnim(mCurtain.getY(), target);
+			recyleMovement();
+			break;
+		default:
+			break;
 		}
-		return false;
+		return true;
 	}
 
 	/**
@@ -113,11 +110,9 @@ public class CurtainView extends ImageView {
 	 * @return whether a fling should expands the panel; contracts otherwise
 	 */
 	private boolean isFling(float vel, float vectorVel, float diffY) {
-		if (Math.abs(vectorVel) < mFlingAnimationUtils
-				.getMinVelocityPxPerSecond()) {
-			return diffY > getHeight();
-		}
-		return false;
+		boolean beyondThesold = Math.abs(vectorVel) >= mFlingAnimationUtils
+				.getMinVelocityPxPerSecond();
+		return beyondThesold || Math.abs(diffY) > mCurtainOriginalH / 4;
 	}
 
 	private void recyleMovement() {
@@ -127,52 +122,52 @@ public class CurtainView extends ImageView {
 		}
 	}
 
-	public void setCurtain(View v) {
-		this.img_curtain_ad = v;
-	};
-
-	private void updateCurtainParameters(int y) {
-		ViewGroup.LayoutParams params = img_curtain_ad.getLayoutParams();
-		Log.e(TAG, " y : " + y);
-		y = (y >= ORIGINAL_HEIGHT ? ORIGINAL_HEIGHT : y <= 0 ? 0 : y);
-		Log.e(TAG, " y2 : " + y);
-		params.height = y;
-		curtainHeigh = y;
-		img_curtain_ad.setLayoutParams(params);
-		float curY = curtainHeigh + getHeight();
-		setY(curY <= 0 ? 0 : curY);
+	public void setCurtain(ViewGroup v) {
+		this.mCurtain = v;
+		updateCurtainParameters(mCurtainOriginalH);
 	}
 
-	private void startAnim(int oldHeight, final int newHeight) {
+	private void updateCurtainParameters(float diff) {
+		ViewGroup.LayoutParams params = mCurtain.getLayoutParams();
+		int originalH = params.height;
+		float target = originalH + diff;
+		target = target <= 0 ? 0 : target;
+		params.height = (int) (target >= mCurtainOriginalH ? mCurtainOriginalH
+				: target);
+		mCurtain.setLayoutParams(params);
+	}
+
+	private void startAnim(float oldHeight, final float newHeight) {
 		if (mCurtainChangeAnimator != null) {
-			oldHeight = (Integer) mCurtainChangeAnimator.getAnimatedValue();
+			oldHeight = (Float) mCurtainChangeAnimator.getAnimatedValue();
 			mCurtainChangeAnimator.cancel();
 		}
-		mCurtainChangeAnimator = ValueAnimator.ofInt(oldHeight, newHeight);
-		mCurtainChangeAnimator.setDuration(1000);
+		Log.i(TAG, "newHeight : " + newHeight);
+		mCurtainChangeAnimator = ValueAnimator.ofFloat(oldHeight, newHeight);
+		mCurtainChangeAnimator.setDuration(200);
 		mCurtainChangeAnimator.setInterpolator(AnimationUtils.loadInterpolator(
 				getContext(), android.R.interpolator.fast_out_slow_in));
 		mCurtainChangeAnimator
 				.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
 					@Override
 					public void onAnimationUpdate(ValueAnimator animation) {
-						int height = (Integer) mCurtainChangeAnimator
+						float height = (Float) mCurtainChangeAnimator
 								.getAnimatedValue();
 						updateCurtainParameters(height);
-						isMove = true;
+						isOccupied = true;
 					}
 				});
 		mCurtainChangeAnimator.addListener(new AnimatorListenerAdapter() {
 			@Override
 			public void onAnimationEnd(Animator animation) {
 				mCurtainChangeAnimator = null;
-				isMove = false;
+				isOccupied = false;
 			}
 
 			@Override
 			public void onAnimationCancel(Animator animation) {
 				mCurtainChangeAnimator = null;
-				isMove = false;
+				isOccupied = false;
 			}
 		});
 		mCurtainChangeAnimator.start();
@@ -192,6 +187,14 @@ public class CurtainView extends ImageView {
 			mVelocityTracker.recycle();
 		}
 		mVelocityTracker = VelocityTrackerFactory.obtain(getContext());
+	}
+
+	/**
+	 * 动画 或者事件 正在处理...
+	 * @return
+	 */
+	public boolean isOccupied() {
+		return isOccupied;
 	}
 
 }

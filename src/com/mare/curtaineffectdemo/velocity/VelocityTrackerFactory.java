@@ -1,8 +1,6 @@
-package com.example.curtaineffectdemo.velocity;
+package com.mare.curtaineffectdemo.velocity;
 
 import android.content.Context;
-
-import com.example.curtaineffectdemo.R;
 
 /**
  * A class to generate {@link VelocityTrackerInterface}, depending on the configuration.

@@ -14,7 +14,7 @@
  * limitations under the License
  */
 
-package com.example.curtaineffectdemo.velocity;
+package com.mare.curtaineffectdemo.velocity;
 
 import android.util.Log;
 import android.view.MotionEvent;

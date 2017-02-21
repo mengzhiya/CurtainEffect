@@ -1,4 +1,4 @@
-package com.example.curtaineffectdemo.velocity;
+package com.mare.curtaineffectdemo.velocity;
 
 import android.animation.Animator;
 import android.content.Context;

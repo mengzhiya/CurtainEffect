@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.curtaineffectdemo.velocity;
+package com.mare.curtaineffectdemo.velocity;
 
 /**
  * Helper class for crating pools of objects. An example use looks like this:
