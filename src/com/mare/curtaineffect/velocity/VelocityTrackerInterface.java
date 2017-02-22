@@ -1,4 +1,4 @@
-package com.mare.curtaineffectdemo.velocity;
+package com.mare.curtaineffect.velocity;
 
 import android.view.MotionEvent;
 

@@ -12,7 +12,7 @@
         android:layout_alignParentBottom="true"
         android:background="#33445566" >
 
-        <com.example.curtaineffectdemo.CurtainView
+        <com.mare.curtaineffect.CurtainView
             android:id="@+id/curtain_button"
             android:layout_width="wrap_content"
             android:layout_height="30dp"

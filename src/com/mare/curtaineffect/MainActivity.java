@@ -1,4 +1,4 @@
-package com.mare.curtaineffectdemo;
+package com.mare.curtaineffect;
 
 import android.app.Activity;
 import android.os.Bundle;

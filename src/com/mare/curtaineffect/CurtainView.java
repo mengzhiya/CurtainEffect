@@ -1,20 +1,26 @@
-package com.mare.curtaineffectdemo;
+package com.mare.curtaineffect;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
+import android.app.Service;
 import android.content.Context;
+import android.os.Vibrator;
+import android.test.TouchUtils;
+import android.text.method.Touch;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.TouchDelegate;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 
-import com.mare.curtaineffectdemo.velocity.FlingAnimationUtils;
-import com.mare.curtaineffectdemo.velocity.VelocityTrackerFactory;
-import com.mare.curtaineffectdemo.velocity.VelocityTrackerInterface;
+import com.mare.curtaineffect.velocity.FlingAnimationUtils;
+import com.mare.curtaineffect.velocity.VelocityTrackerFactory;
+import com.mare.curtaineffect.velocity.VelocityTrackerInterface;
 
 public class CurtainView extends ImageView {
 	private static String TAG = "CurtainView";
@@ -27,6 +33,7 @@ public class CurtainView extends ImageView {
 	private FlingAnimationUtils mFlingAnimationUtils;
 	private float mTouchSlop;
 	private float mTheshold = 0;
+	private Vibrator mVibrator;
 
 	public CurtainView(Context context) {
 		this(context, null);
@@ -43,6 +50,7 @@ public class CurtainView extends ImageView {
 
 	private void init(Context context) {
 		mFlingAnimationUtils = new FlingAnimationUtils(context, 0.6f);
+		mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 		final ViewConfiguration configuration = ViewConfiguration
 				.get(getContext());
 		mTouchSlop = configuration.getScaledTouchSlop();
@@ -59,6 +67,7 @@ public class CurtainView extends ImageView {
 		case MotionEvent.ACTION_DOWN:
 			mDownOriginalY = mDownY = event.getRawY();
 			isOccupied = true;
+			vibrate(true);
 			initVelocityTracker();
 			trackMovement(event);
 			return true;
@@ -85,13 +94,15 @@ public class CurtainView extends ImageView {
 			}
 			float expandedH = downY - mDownOriginalY;
 			//boolean isFling = isFling(vel, vectorVel, expandedH);
+			//Log.i(TAG, "vel : " + vel +",theshold : " + mFlingAnimationUtils.getMinVelocityPxPerSecond());
 			float target = 0;
 			if (Math.abs(expandedH) < mTheshold
 					|| vel >= mFlingAnimationUtils.getMinVelocityPxPerSecond()) {
 				target = mCurtainOriginalH;
-			} else {
+			} else {  
 				target = -mCurtainOriginalH;
 			}
+			vibrate(false);
 			startAnim(mCurtain.getY(), target);
 			recyleMovement();
 			break;
@@ -142,7 +153,6 @@ public class CurtainView extends ImageView {
 			oldHeight = (Float) mCurtainChangeAnimator.getAnimatedValue();
 			mCurtainChangeAnimator.cancel();
 		}
-		Log.i(TAG, "newHeight : " + newHeight);
 		mCurtainChangeAnimator = ValueAnimator.ofFloat(oldHeight, newHeight);
 		mCurtainChangeAnimator.setDuration(200);
 		mCurtainChangeAnimator.setInterpolator(AnimationUtils.loadInterpolator(
@@ -195,6 +205,17 @@ public class CurtainView extends ImageView {
 	 */
 	public boolean isOccupied() {
 		return isOccupied;
+	}
+	
+	private void vibrate(boolean start){
+		if (start) {
+			mVibrator.vibrate(500);
+			mVibrator.vibrate(new long[]{100,300}, -1);
+		}else {
+			if (null != mVibrator) {
+				mVibrator.cancel();
+			}
+		}
 	}
 
 }
